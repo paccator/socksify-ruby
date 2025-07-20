@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # namespace
 module Socksify
   # rubocop:disable Style/Documentation

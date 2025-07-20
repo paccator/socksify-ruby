@@ -69,20 +69,20 @@ module Socksproxyable
     # rubocop:disable Metrics
     def socks_connect(host, port)
       port = Socket.getservbyname(port) if port.is_a?(String)
-      req = String.new
+      req = +''
       Socksify.debug_debug 'Sending destination address'
       req << TCPSocket.socks_version_hex
       Socksify.debug_debug TCPSocket.socks_version_hex.unpack 'H*'
       req << "\001"
       req << "\000" if self.class.socks_version == '5'
-      req << [port].pack('n') if self.class.socks_version =~ /^4/
+      req << [port].pack('n') if /^4/.match?(self.class.socks_version)
       host = Resolv::DNS.new.getaddress(host).to_s if self.class.socks_version == '4'
       Socksify.debug_debug host
       if host =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/ # to IPv4 address
         req << "\001" if self.class.socks_version == '5'
         ip = (1..4).map { |i| Regexp.last_match(i).to_i }.pack('CCCC')
         req << ip
-      elsif host =~ /^[:0-9a-f]+$/ # to IPv6 address
+      elsif /^[:0-9a-f]+$/.match?(host) # to IPv6 address
         raise 'TCP/IPv6 over SOCKS is not yet supported (inet_pton missing in Ruby & not supported by Tor'
         # req << "\004" # UNREACHABLE
       elsif self.class.socks_version == '5' # to hostname
@@ -133,7 +133,7 @@ module Socksproxyable
                       i = 0
                       ip6 = ''
                       bind_addr_s.each_byte do |b|
-                        ip6 += ':' if i > 0 && i.even?
+                        ip6 += ':' if i.positive? && i.even?
                         i += 1
                         ip6 += b.to_s(16).rjust(2, '0')
                       end

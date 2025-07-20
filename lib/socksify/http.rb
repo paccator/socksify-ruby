@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #  Copyright (C) 2007 Stephan Maka <stephan@spaceboyz.net>
 #  Copyright (C) 2011 Musy Bite <musybite@gmail.com>
 #

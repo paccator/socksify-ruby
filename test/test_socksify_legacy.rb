@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TestSocksifyLegacy
   if RUBY_VERSION.to_f < 3.1 # test legacy methods TCPSocket.socks_server= and TCPSocket.socks_port=
     def test_check_tor

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative 'socksproxyable'
 
 # monkey patch
@@ -70,7 +72,7 @@ class TCPSocket
   def make_socks_connection(host, port, **kwargs)
     Socksify.debug_notice "Connecting to SOCKS server #{socks_server}:#{socks_port}"
     initialize_tcp socks_server, socks_port, **kwargs
-    socks_authenticate(socks_username, socks_password) unless @socks_version =~ /^4/
+    socks_authenticate(socks_username, socks_password) unless /^4/.match?(@socks_version)
     socks_connect(host, port) if host
   end
 
