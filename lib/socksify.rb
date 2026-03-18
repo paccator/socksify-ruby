@@ -1,4 +1,5 @@
 # encoding: us-ascii
+# frozen_string_literal: true
 
 # Copyright (C) 2007 Stephan Maka <stephan@spaceboyz.net>
 #
@@ -119,7 +120,7 @@ module Socksify
   end
 
   def self.request(host)
-    req = String.new << "\005"
+    req = (+'') << "\005"
     case host
     when /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/ # to IPv4 address
       req << "\xF1\000\001#{(1..4).map { |i| Regexp.last_match(i).to_i }.pack('CCCC')}"

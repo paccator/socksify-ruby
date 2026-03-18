@@ -4,6 +4,8 @@
 module Socksproxyable
   # class methods
   module ClassMethods
+    SOCKS4_VERSIONS = %w[4 4a].freeze
+
     attr_accessor :socks_server, :socks_port, :socks_username, :socks_password
 
     def socks_version
@@ -19,15 +21,15 @@ module Socksproxyable
     end
 
     def socks_version_hex
-      socks_version == '4a' || socks_version == '4' ? "\004" : "\005"
+      SOCKS4_VERSIONS.include?(socks_version) ? "\004" : "\005"
     end
   end
 
   # instance method #socks_authenticate
   module InstanceMethodsAuthenticate
     # rubocop:disable Metrics
-    def socks_authenticate
-      if self.class.socks_username || self.class.socks_password
+    def socks_authenticate(socks_username, socks_password)
+      if socks_username || socks_password
         Socksify.debug_debug 'Sending username/password authentication'
         write "\005\001\002"
       else
@@ -42,16 +44,16 @@ module Socksproxyable
         raise SOCKSError, "SOCKS version #{auth_reply[0..0]} not supported"
       end
 
-      if self.class.socks_username || self.class.socks_password
+      if socks_username || socks_password
         if auth_reply[1..1] != "\002"
           raise SOCKSError, "SOCKS authentication method #{auth_reply[1..1]} neither requested nor supported"
         end
 
         auth = "\001"
-        auth += self.class.socks_username.to_s.length.chr
-        auth += self.class.socks_username.to_s
-        auth += self.class.socks_password.to_s.length.chr
-        auth += self.class.socks_password.to_s
+        auth += socks_username.to_s.length.chr
+        auth += socks_username.to_s
+        auth += socks_password.to_s.length.chr
+        auth += socks_password.to_s
         write auth
         auth_reply = recv(2).to_s
         raise SOCKSError, 'SOCKS authentication failed' if auth_reply[1..1] != "\000"
@@ -67,20 +69,20 @@ module Socksproxyable
     # rubocop:disable Metrics
     def socks_connect(host, port)
       port = Socket.getservbyname(port) if port.is_a?(String)
-      req = String.new
+      req = +''
       Socksify.debug_debug 'Sending destination address'
       req << TCPSocket.socks_version_hex
       Socksify.debug_debug TCPSocket.socks_version_hex.unpack 'H*'
       req << "\001"
       req << "\000" if self.class.socks_version == '5'
-      req << [port].pack('n') if self.class.socks_version =~ /^4/
+      req << [port].pack('n') if /^4/.match?(self.class.socks_version)
       host = Resolv::DNS.new.getaddress(host).to_s if self.class.socks_version == '4'
       Socksify.debug_debug host
       if host =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/ # to IPv4 address
         req << "\001" if self.class.socks_version == '5'
         ip = (1..4).map { |i| Regexp.last_match(i).to_i }.pack('CCCC')
         req << ip
-      elsif host =~ /^[:0-9a-f]+$/ # to IPv6 address
+      elsif /^[:0-9a-f]+$/.match?(host) # to IPv6 address
         raise 'TCP/IPv6 over SOCKS is not yet supported (inet_pton missing in Ruby & not supported by Tor'
         # req << "\004" # UNREACHABLE
       elsif self.class.socks_version == '5' # to hostname
@@ -131,7 +133,7 @@ module Socksproxyable
                       i = 0
                       ip6 = ''
                       bind_addr_s.each_byte do |b|
-                        ip6 += ':' if i > 0 && i.even?
+                        ip6 += ':' if i.positive? && i.even?
                         i += 1
                         ip6 += b.to_s(16).rjust(2, '0')
                       end
